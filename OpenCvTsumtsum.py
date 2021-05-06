@@ -4,10 +4,22 @@ import cv2
 import numpy
 import itertools
 
+# グループ化する時の色違い許容値
 COLOR_THRESHOLD = 10
+# 同じ色をつなぐ時の有効値
+JOIN_VALUE = 100
+# 色を抽出する時の中心からの距離
+COLOR_RANGE = 5
+# ハフ変換で検出する円の設定
+HOUGHCIRCLES_DP = 1
+HOUGHCIRCLES_MINDIST = 25
+HOUGHCIRCLES_PARAM1 = 100
+HOUGHCIRCLES_PARAM2 = 25
+HOUGHCIRCLES_MINRADIUS = 25
+HOUGHCIRCLES_MAXRADIUS = 45
 
 
-def routeSearch(imgArray, save=False):
+def routeSearch(imgArray, save=False, view=False):
     open_cv_image = numpy.array(imgArray)
     # Convert RGB to BGR
     img = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
@@ -17,7 +29,7 @@ def routeSearch(imgArray, save=False):
     averaging = GetAveraging(img, circles)
     routing = GetRouting(averaging)
 
-    if save:
+    if save == True or view == True:
         # 描画
         for item in averaging:
             cv2.circle(img, (item['x'], item['y']), item['radius'], (item['blue'], item['green'], item['red']), thickness=-1)
@@ -27,16 +39,16 @@ def routeSearch(imgArray, save=False):
             cv2.arrowedLine(img, (averaging[item[0]]['x'], averaging[item[0]]['y']), (
                 averaging[item[1]]['x'], averaging[item[1]]['y']), (0, 255, 0), thickness=4)
 
-        fileName = 'tsumtsum/screenshot_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.png'
-
-        # 保存先のフォルダを取得
-        dirname = os.path.dirname(fileName)
-
-        # フォルダが指定してあれば、作成
-        if len(dirname) != 0: os.makedirs(dirname, exist_ok=True)
-
-        # キャプチャ画像保存
-        cv2.imwrite(fileName, img)
+        if save == True:
+            fileName = 'tsumtsum/screenshot_' + datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.png'
+            dirname = os.path.dirname(fileName)
+            if len(dirname) != 0: os.makedirs(dirname, exist_ok=True)
+            cv2.imwrite(fileName, img)
+        
+        if view == True:
+            cv2.imshow('detected circles', img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
     route = []
     for index, item in enumerate(routing):
@@ -51,7 +63,13 @@ def routeSearch(imgArray, save=False):
 
 def GetHoughCircles(img):
     cimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 1, 25, param1=100, param2=25, minRadius=25, maxRadius=45)
+    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 
+                               dp=HOUGHCIRCLES_DP, 
+                               minDist=HOUGHCIRCLES_MINDIST, 
+                               param1=HOUGHCIRCLES_PARAM1, 
+                               param2=HOUGHCIRCLES_PARAM2, 
+                               minRadius=HOUGHCIRCLES_MINRADIUS, 
+                               maxRadius=HOUGHCIRCLES_MAXRADIUS)
     if circles is not None:
         circles = numpy.uint16(numpy.around(circles))
     return circles
@@ -63,7 +81,7 @@ def GetAveraging(img, circles):
     index = 0
     for i in circles[0, :]:
         # img[top : bottom, left : right]
-        imgcrop = img[i[1]-5: i[1]+5, i[0]-5: i[0]+5]
+        imgcrop = img[i[1]-COLOR_RANGE: i[1]+COLOR_RANGE, i[0]-COLOR_RANGE: i[0]+COLOR_RANGE]
         # imgblur = cv2.blur(imgcrop, (15, 15))
 
         b = round(imgcrop.T[0].flatten().max() * 0.1) * 10
@@ -163,7 +181,7 @@ def RouteSearch2(target, items):
         a = numpy.array([ax, ay])
         b = numpy.array([bx, by])
         norm = numpy.linalg.norm(b - a)
-        if norm < 70:
+        if norm <= JOIN_VALUE:
             fragment.append([target['index'], item['index']])
 
     return fragment

@@ -13,14 +13,14 @@ adbpath = 'C:\\platform-tools_r30.0.4-windows\\platform-tools\\'
 
 def main():
 
-    while keyboard.is_pressed('q') == False:
-        imgArray = pyautogui.screenshot(region=(0,0,500,888))
-        # imgArray = numpy.array(Image.open('tsumtsum/screenshot_20210506181123.png')) # デバッグ
+    imgArray = numpy.array(Image.open('screenshot_20210506181126.png')) # デバッグ
+    route = tsum.routeSearch(imgArray, save=False, view=True)
 
-        route = tsum.routeSearch(imgArray, save=True)
-        touchMovePos(route)
-
-        time.sleep(2)
+    # while keyboard.is_pressed('q') == False:
+    #     imgArray = pyautogui.screenshot(region=(0,0,500,888))
+    #     route = tsum.routeSearch(imgArray)
+    #     touchMovePos(route)
+    #     time.sleep(2)
 
     
 
